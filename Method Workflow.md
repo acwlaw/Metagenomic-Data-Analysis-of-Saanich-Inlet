@@ -19,6 +19,13 @@ megahit -1 /home/micb405/data/project_2/SI072_LV_100m_DNA_R1.fastq.gz -2 /home/m
 ### Step 2: MaxBin 2.0 - Assigning MAGs
 MaxBin 2.0 is used to cluster the metagenomic contigs into appropriate MAGs (metagenome assembled genomes), partitioning each bin to holds contigs consisting of the same species.
 
+```
+/home/micb405/Group10/Project2$ perl5.26.0 
+/home/micb405/resources/project_2/MaxBin-2.2.4/run_MaxBin.pl -contig ../megahit_out/final.contigs.fa -out maxBin -reads 
+/home/micb405/data/project_2/SI072_LV_100m_DNA_R1.fastq.gz -reads2 
+/home/micb405/data/project_2/SI072_LV_100m_DNA_R2.fastq.gz
+```
+
 ### Step 3: checkM - Identifying Best MAGs
 checkM identifies high quality MAGs by estimating the completeness and contamination of a genome using marker genes that are specific to a genome's inferred lineage within a reference genome tree. The code was ran by Connor Morgan-Lang
 
@@ -66,6 +73,10 @@ while read line; do accession=$( echo $line | awk '{ print $4 }'); bin=$( echo $
 
 ### Step 5: Prokka - Annotate MAGs
 Prokka is used to annotate bacterial genomes and is thus able to identify features of the gene.
+The generalized command for prokka. A prefix of the bin was assigned for clarity.
+```
+prokka maxBin.*.fasta --outdir /home/micb405/Group10/Project2/prokka_out/maxBin* --prefix maxBin*
+```
 
 ### Step 6: BWA/RPKM - Abundance Estimation
 BWA is used to align a reference sequence against the FASTQ files of the genome sequence at 100m depth (both forward and reverse reads). The reference sequence used is a collection of nitrogen cycle genes that were a result of a grep search against the Prokka output .tsv file from all of our high quality MAGs.
@@ -98,4 +109,37 @@ ls maxBin/highquality/*fasta >mag_list.txt
 -r /home/micb405/Group10/Project2/RPKM/SI072_LV_100m_DNA_RPKM.csv \
 -o /home/micb405/Group10/Project2/RPKM/SI072_LV_100m_DNA_RPKM.csv
 ```
+### Step 7: Estimation of N-cycling Gene Abundance within the Microbial Community
+This step is to create a normalized abundance for our nitrogen genes of interest and will be outputted in a .csv file with the Bin identifer, Gene, Prokka gene ID, and RPKM.
 
+**Creating a reference set:**
+
+Extracting annotated N-cycling genes outputted by prokka:
+```
+while read line; 
+do grep $line Prokka/Bins/SI072_LV_*/*tsv >>bin_nitrogen_cycler_genes.txt; 
+done<nitrogen_cyclers.txt
+
+while read line
+do ffn=$( echo $line | awk -F':' '{ print $1 }' | sed 's/.tsv/.ffn/g' )
+prefix=$( echo $line | awk '{ print $1 }' | awk -F':' '{ print $2 }' )
+grep "$prefix" $ffn; done<bin_nitrogen_cycler_genes.txt >bin_nitrogen_cycler_headers.txt
+```
+
+**Alignment using BWA**
+```
+bwa index bin_nitrogen_cycler_genes.ffn
+```
+```
+nohup bwa mem -t 12 bin_nitrogen_cycler_genes.ffn \
+/home/micb405/data/project_2/SI072_LV_165m_DNA_R1.fastq.gz \
+/home/micb405/data/project_2/SI072_LV_165m_DNA_R2.fastq.gz \
+1>bin_nitrogen_cycler_genes_165m.sam 2>bin_nitrogen_cycler_genes.bwa.stderr &
+```
+**Abundance Calculation**
+```
+/home/micb405/resources/project_2/rpkm -c bin_nitrogen_cycler_genes.ffn \
+-a bin_nitrogen_cycler_genes_165m.sam \
+-o bin_nitrogen_cycler_genes_165m_RPKM.csv \
+--verbose
+```
