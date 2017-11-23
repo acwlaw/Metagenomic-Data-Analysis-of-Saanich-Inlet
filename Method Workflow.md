@@ -57,9 +57,45 @@ sort -gk3 distances.tab | head
 ### Step 4.2: LAST - Identify Closest Genomic Relative
 LAST is used annotate unassigned hits from Mash using an alignment-based method for quering marker genes that finds similar regions between the sequences. The tool was run against a SILVA 128 database.
 
+```
+while read line; do bin=$( echo $line | awk '{ print $1 }'); sid=$( echo $bin | awk -F. '{ print $1 }'); if [ -f MaxBin/$bin.fasta ]; then best_hit=$(lastal -f TAB -P 4 /home/micb405/resources/project_2/db_SILVA_128_SSURef_tax_silva MaxBin/$bin.fasta | grep -v "^#" | head -1); echo $bin,$sid,$best_hit | sed 's/,\| /\t/g'; fi; done<GT10Complete_LT5Contam_MAGs_checkM.tsv >LAST_SILVA_alignments.BEST.tsv
+
+
+while read line; do accession=$( echo $line | awk '{ print $4 }'); bin=$( echo $line | awk '{ print $1 }' ); if [ ! -z $accession ]; then last_hit=$( grep "$accession" /home/micb405/resources/project_2/SILVA_128_SSURef_taxa_headers.txt | awk '{ $1=""; print $0 }'); echo $bin,$last_hit; fi; done<LAST_SILVA_alignments.BEST.tsv >LAST_SILVA_classifications.BEST.csv
+```
+
 ### Step 5: Prokka - Annotate MAGs
 Prokka is used to annotate bacterial genomes and is thus able to identify features of the gene.
 
-### Step 6: RPKM/BWA - Abundance Estimation
+### Step 6: BWA/RPKM - Abundance Estimation
+BWA is used to align a reference sequence against the FASTQ files of the genome sequence at 100m depth (both forward and reverse reads). The reference sequence used is a collection of nitrogen cycle genes that were a result of a grep search against the Prokka output .tsv file from all of our high quality MAGs.
+RPKM (Reads per Kilobase per Million) is then used to normalize the differences in sequence length of contigs and number of contigs (sequence depth) allowing us to visualize the abundance of nitrogen cycle genes.
 
+Indexing the reference sequence:
+```
+bwa index /home/micb405/Group10/Project2/MEGAHIT/SI072_LV_100m/SI072_LV_100m.contigs.fa
+```
+Alignment:
+```
+nohup bwa mem -t 4 /home/micb405/Group10/Project2/MEGAHIT/SI072_LV_100m/SI072_LV_100m.contigs.fa \
+/home/micb405/data/project_2/SI072_LV_100m_DNA_R1.fastq.gz /home/micb405/data/project_2/SI072_LV_100m_DNA_R2.fastq.gz \
+1>/home/micb405/Group10/Project2/bwa/SI072_LV_100m_DNA.sam 2>/home/micb405/Group10/Project2/bwa/SI072_LV_100m_DNA.bwa.stderr &
+```
+RPKM Calculations:
+```
+/home/micb405/resources/project_2/rpkm -c /home/micb405/Group10/Project2/MEGAHIT/SI072_LV_100m/SI072_LV_100m.contigs.fa \
+-a /home/micb405/Group10/Project2/bwa/SI072_LV_100m_DNA.sam -o /home/micb405/Group10/Project2/RPKM/SI072_LV_100m_DNA_RPKM.csv
+```
+Mean RPKM of each MAG:
+```
+/home/micb405/resources/project_2/find_mag_rpkm_average.py
+```
+Generating list of all the bins to generate the desired .csv file:
+```
+ls maxBin/highquality/*fasta >mag_list.txt
+
+/home/micb405/resources/project_2/find_mag_rpkm_average.py -l mag_list.txt \
+-r /home/micb405/Group10/Project2/RPKM/SI072_LV_100m_DNA_RPKM.csv \
+-o /home/micb405/Group10/Project2/RPKM/SI072_LV_100m_DNA_RPKM.csv
+```
 
