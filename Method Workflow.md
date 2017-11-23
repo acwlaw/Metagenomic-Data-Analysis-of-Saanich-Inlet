@@ -132,14 +132,14 @@ bwa index bin_nitrogen_cycler_genes.ffn
 ```
 ```
 nohup bwa mem -t 12 bin_nitrogen_cycler_genes.ffn \
-/home/micb405/data/project_2/SI072_LV_165m_DNA_R1.fastq.gz \
-/home/micb405/data/project_2/SI072_LV_165m_DNA_R2.fastq.gz \
-1>bin_nitrogen_cycler_genes_165m.sam 2>bin_nitrogen_cycler_genes.bwa.stderr &
+/home/micb405/data/project_2/SI072_LV_100m_DNA_R1.fastq.gz \
+/home/micb405/data/project_2/SI072_LV_100m_DNA_R2.fastq.gz \
+1>bin_nitrogen_cycler_genes_100m.sam 2>bin_nitrogen_cycler_genes.bwa.stderr &
 ```
 **Abundance Calculation**
 ```
 /home/micb405/resources/project_2/rpkm -c bin_nitrogen_cycler_genes.ffn \
--a bin_nitrogen_cycler_genes_165m.sam \
--o bin_nitrogen_cycler_genes_165m_RPKM.csv \
+-a bin_nitrogen_cycler_genes_100m.sam \
+-o bin_nitrogen_cycler_genes_100m_RPKM.csv \
 --verbose
 ```
